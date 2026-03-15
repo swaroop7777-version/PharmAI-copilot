@@ -129,6 +129,3 @@ if __name__ == '__main__':
     print("Listening on port 5000...")
     app.run(host='0.0.0.0', port=5001, debug=False)
 
-@app.route('/', methods=['GET'])
-def health_check():
-    return jsonify({"status": "RegulaFlow backend is running ✅", "port": 5001})
