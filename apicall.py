@@ -6,12 +6,12 @@ import re
 app = Flask(__name__)
 CORS(app)
 
-# --------------------------------
-# Load regulation rules from files
-# --------------------------------
+
+# -----------------------------
+# Load regulation rules
+# -----------------------------
 
 def load_rules(market):
-
     files = {
         "UK": "regulations/uk_mhra.txt",
         "USA": "regulations/usa_fda.txt",
@@ -20,22 +20,36 @@ def load_rules(market):
 
     path = files.get(market, "regulations/uk_mhra.txt")
 
-    with open(path, "r") as f:
-        return f.read()
+    try:
+        with open(path, "r") as f:
+            return f.read()
+    except:
+        return "Follow strict pharmaceutical safety, disclosure, and citation rules."
 
 
-# --------------------------------
-# Main API
-# --------------------------------
+# -----------------------------
+# Extract drug name from brief
+# -----------------------------
+
+def extract_drug_name(text):
+    match = re.search(r'for\s+([A-Za-z0-9\-]+)', text, re.IGNORECASE)
+
+    if match:
+        return match.group(1).strip(",.")
+
+    return "the medication"
+
+
+# -----------------------------
+# API Endpoint
+# -----------------------------
 
 @app.route('/process', methods=['POST'])
 def process():
-
     data = request.get_json()
 
     user_input = data.get('content') or data.get('brief') or ""
     mode = data.get('mode', 'generate')
-
     market = data.get('market', 'UK')
 
     if isinstance(market, dict):
@@ -44,25 +58,30 @@ def process():
     rules = load_rules(market)
 
     if not user_input:
-        user_input = "Create a landing page for a diabetes medication."
+        user_input = "Create a landing page for Zyloprin, a hypertension medication for healthcare professionals."
 
-    drug_match = re.search(r'for\s+([A-Za-z0-9\-]+)', user_input)
-    drug_name = drug_match.group(1) if drug_match else "the medication"
+    drug_name = extract_drug_name(user_input)
+
+    # -----------------------------
+    # AUDIT MODE
+    # -----------------------------
 
     if mode == "audit":
 
         prompt = f"""
 You are a pharmaceutical compliance auditor.
 
-Regulatory Compliance Checks:
+Market: {market}
+
+Regulatory Compliance Rules:
 {rules}
 
-Audit the following page content.
+Audit the following webpage content.
 
 CONTENT:
 {user_input}
 
-Return results using this structure:
+Return results using this exact structure.
 
 RULE CHECK RESULTS
 Check 1 - PASS or FAIL
@@ -82,32 +101,52 @@ Explain accessibility or technical issues.
 QA / REGULATORY
 Explain compliance risks and how to fix them.
 
-SCORE
+SCORE:
 Return one number between 0 and 100.
 """
+
+    # -----------------------------
+    # GENERATION MODE
+    # -----------------------------
 
     else:
 
         prompt = f"""
-You are a pharmaceutical marketing AI.
+You are an expert pharmaceutical marketing copywriter and regulatory reviewer.
 
-Drug name: {drug_name}
+Drug Name: {drug_name}
+Market: {market}
 
-Regulatory Compliance Checks:
+Regulatory Rules:
 {rules}
 
-Generate a compliant pharmaceutical landing page.
+TASK
+Generate compliant landing page marketing content for healthcare professionals.
 
-Return these sections exactly:
+IMPORTANT
+Do NOT generate UI instructions like:
+- logo
+- navigation menu
+- CTA layout
 
-COMPONENTS
-List recommended UI components for this page.
+Write real marketing content.
+
+Return ONLY these sections.
 
 TITLE
+Clear product headline.
+
 HERO_TEXT
+Short description explaining what {drug_name} treats.
+
 BENEFITS
+3–4 bullet points describing clinical benefits.
+
 SAFETY_INFORMATION
+Important safety warnings, contraindications, and disclaimers.
+
 REFERENCES
+1–2 placeholder scientific citations.
 
 Then perform a compliance audit.
 
@@ -121,21 +160,45 @@ Check 6 - PASS or FAIL
 Check 7 - PASS or FAIL
 
 DESIGNER
-DEVELOPER
-QA / REGULATORY
+Comment on visual clarity.
 
-SCORE
+DEVELOPER
+Comment on accessibility and HTML structure.
+
+QA / REGULATORY
+Explain compliance considerations.
+
+SCORE:
 Return one number between 0 and 100.
 
 BRIEF:
 {user_input}
 """
 
+    # -----------------------------
+    # System prompt (strong control)
+    # -----------------------------
+
+    system_prompt = """
+You are a strict pharmaceutical AI reviewer.
+
+Never output UI instructions like:
+'logo', 'navigation menu', 'hero image'.
+
+Only produce professional pharmaceutical marketing copy and compliance analysis.
+"""
+
     try:
 
         response = ollama.chat(
             model='llama3.2',
-            messages=[{"role": "user", "content": prompt}]
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            options={
+                "temperature": 0.2
+            }
         )
 
         raw_text = response['message']['content']
@@ -155,6 +218,10 @@ BRIEF:
             "error": str(e)
         }), 500
 
+
+# -----------------------------
+# Start Server
+# -----------------------------
 
 if __name__ == "__main__":
     print("Pharma AI backend running on port 5001")
