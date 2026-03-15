@@ -1,0 +1,15 @@
+US FDA Pharmaceutical Website Compliance Checks
+
+CHECK 1: Safety information must be clearly visible.
+
+CHECK 2: Marketing must present fair balance between risks and benefits.
+
+CHECK 3: Claims must be supported by clinical data.
+
+CHECK 4: Pages must include a link to full prescribing information.
+
+CHECK 5: Marketing must not imply guaranteed cure.
+
+CHECK 6: Drug claims must match approved labeling.
+
+CHECK 7: Safety warnings must be clearly identifiable.

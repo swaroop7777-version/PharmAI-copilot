@@ -1,0 +1,15 @@
+UK MHRA Pharmaceutical Website Compliance Checks
+
+CHECK 1: Safety information must appear above the fold.
+
+CHECK 2: Benefit claims must be supported by clinical evidence.
+
+CHECK 3: Risk information must appear alongside benefit claims.
+
+CHECK 4: Pages must include a link to full prescribing information.
+
+CHECK 5: Claims must match approved drug indications.
+
+CHECK 6: Marketing must not exaggerate treatment outcomes.
+
+CHECK 7: Important Safety Information must be clearly labelled.

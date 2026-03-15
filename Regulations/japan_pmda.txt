@@ -1,0 +1,15 @@
+Japan PMDA Pharmaceutical Website Compliance Checks
+
+CHECK 1: Advertising must match approved drug indications.
+
+CHECK 2: Marketing claims must not exaggerate effectiveness.
+
+CHECK 3: Safety warnings must be clearly visible.
+
+CHECK 4: Claims must reference approved medical data.
+
+CHECK 5: Risk disclosure must appear alongside benefit statements.
+
+CHECK 6: Advertising must be scientifically accurate.
+
+CHECK 7: Information must not mislead patients or physicians.

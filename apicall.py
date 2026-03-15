@@ -1,131 +1,161 @@
 import ollama
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import re
 
 app = Flask(__name__)
 CORS(app)
 
-# Increase max content length to handle full website HTML transfers
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+# --------------------------------
+# Load regulation rules from files
+# --------------------------------
 
-# THE WINNING "MULTI-PERSONA" PROMPT
-SYSTEM_PROMPT = (
-    "You are an AI expert panel consisting of a Lead Designer, a Senior Developer, and a Pharma Regulatory QA. "
-    "Your task is to audit web content for strict Pharmaceutical industry standards.\n\n"
-    "CRITERIA FOR EVALUATION:\n"
-    "1. DESIGNER: Check brand consistency and visual hierarchy. Ensure no 'medical miracle' imagery.\n"
-    "2. DEVELOPER: Check WCAG AA accessibility (contrast 4.5:1), alt-text, and semantic HTML (H1-H2-H3 flow).\n"
-    "3. QA/REGULATORY: Check for 'Fair Balance' (Safety info must be prominent), Exit Disclaimers on external links, "
-    "and proper medical citations [1].\n\n"
-    "STRICT OUTPUT FORMAT:\n"
-    "You must return your response in this exact structure so the frontend can parse it:\n"
-    "DESIGNER: [Feedback + Justification]\n"
-    "DEVELOPER: [Feedback + Justification]\n"
-    "QA/REGULATORY: [Feedback + Justification]\n"
-    "SCORE: [A single number 0-100]"
-)
+def load_rules(market):
 
+    files = {
+        "UK": "regulations/uk_mhra.txt",
+        "USA": "regulations/usa_fda.txt",
+        "JAPAN": "regulations/japan_pmda.txt"
+    }
+
+    path = files.get(market, "regulations/uk_mhra.txt")
+
+    with open(path, "r") as f:
+        return f.read()
+
+
+# --------------------------------
+# Main API
+# --------------------------------
 
 @app.route('/process', methods=['POST'])
-def handle_ai_task():
-    # 1. Get the data from Lovable
-    data = request.get_json()
-    print(f"\n--- DATA RECEIVED: {data} ---")
+def process():
 
-    # 2. Smart Extraction
-    user_input = data.get('content') or data.get('brief') or data.get('prompt')
+    data = request.get_json()
+
+    user_input = data.get('content') or data.get('brief') or ""
     mode = data.get('mode', 'generate')
 
-    # 3. Emergency Demo Fallback
-    if not user_input or user_input == "":
-        user_input = "Create a medical landing page for Zyloprin (hypertension). Focus on doctors."
-        print("!!! No input found, forcing Zyloprin Demo Mode !!!")
+    market = data.get('market', 'UK')
 
-    # 4. Prompt Logic
-    if mode == 'audit':
-        user_prompt = f"""
-AUDIT THIS WEBPAGE FOR PHARMA COMPLIANCE.
+    if isinstance(market, dict):
+        market = market.get("value", "UK")
+
+    rules = load_rules(market)
+
+    if not user_input:
+        user_input = "Create a landing page for a diabetes medication."
+
+    drug_match = re.search(r'for\s+([A-Za-z0-9\-]+)', user_input)
+    drug_name = drug_match.group(1) if drug_match else "the medication"
+
+    if mode == "audit":
+
+        prompt = f"""
+You are a pharmaceutical compliance auditor.
+
+Regulatory Compliance Checks:
+{rules}
+
+Audit the following page content.
 
 CONTENT:
 {user_input}
 
-Evaluate using these personas:
+Return results using this structure:
 
-DESIGNER:
-Check visual hierarchy, CTA clarity, and brand safety.
+RULE CHECK RESULTS
+Check 1 - PASS or FAIL
+Check 2 - PASS or FAIL
+Check 3 - PASS or FAIL
+Check 4 - PASS or FAIL
+Check 5 - PASS or FAIL
+Check 6 - PASS or FAIL
+Check 7 - PASS or FAIL
 
-DEVELOPER:
-Check WCAG accessibility, alt text, semantic HTML.
+DESIGNER
+Explain layout or branding issues.
 
-QA/REGULATORY:
-Check fair balance, safety disclosures, citations.
+DEVELOPER
+Explain accessibility or technical issues.
 
-Return in EXACT format:
+QA / REGULATORY
+Explain compliance risks and how to fix them.
 
-DESIGNER: ...
-DEVELOPER: ...
-QA/REGULATORY: ...
-SCORE: number between 0-100
+SCORE
+Return one number between 0 and 100.
 """
+
     else:
-        user_prompt = f"""
-You are a pharmaceutical marketing copywriter.
 
-Generate compliant landing page content.
+        prompt = f"""
+You are a pharmaceutical marketing AI.
 
-Return structured sections exactly like this:
+Drug name: {drug_name}
 
-TITLE:
-HERO_TEXT:
-BENEFITS:
-SAFETY_INFORMATION:
-REFERENCES:
+Regulatory Compliance Checks:
+{rules}
 
-Then perform a compliance evaluation using these personas:
+Generate a compliant pharmaceutical landing page.
 
-DESIGNER:
-DEVELOPER:
-QA/REGULATORY:
-SCORE:
+Return these sections exactly:
+
+COMPONENTS
+List recommended UI components for this page.
+
+TITLE
+HERO_TEXT
+BENEFITS
+SAFETY_INFORMATION
+REFERENCES
+
+Then perform a compliance audit.
+
+RULE CHECK RESULTS
+Check 1 - PASS or FAIL
+Check 2 - PASS or FAIL
+Check 3 - PASS or FAIL
+Check 4 - PASS or FAIL
+Check 5 - PASS or FAIL
+Check 6 - PASS or FAIL
+Check 7 - PASS or FAIL
+
+DESIGNER
+DEVELOPER
+QA / REGULATORY
+
+SCORE
+Return one number between 0 and 100.
 
 BRIEF:
 {user_input}
 """
 
     try:
-        print(f"Ollama is thinking about: {user_input[:50]}...")
 
         response = ollama.chat(
             model='llama3.2',
-            messages=[
-                {'role': 'system', 'content': SYSTEM_PROMPT},
-                {'role': 'user', 'content': user_prompt}
-            ]
+            messages=[{"role": "user", "content": prompt}]
         )
 
         raw_text = response['message']['content']
-        print(f"AI FINISHED: {raw_text[:200]}...")
 
-        # Extract Score
-        import re
-        score = 65
         score_match = re.search(r"SCORE:\s*(\d+)", raw_text)
-        if score_match:
-            score = int(score_match.group(1))
+        score = int(score_match.group(1)) if score_match else 70
 
         return jsonify({
             "result": raw_text,
-            "score": score
+            "score": score,
+            "market": market
         })
 
     except Exception as e:
-        print(f"ERROR: {e}")
-        return jsonify({"error": str(e)}), 500
+
+        return jsonify({
+            "error": str(e)
+        }), 500
 
 
-if __name__ == '__main__':
-    # Ensure this is the very last part of the file
-    print("--- PHARMA AI BACKEND STARTING ---")
-    print("Listening on port 5000...")
-    app.run(host='0.0.0.0', port=5001, debug=False)
-
+if __name__ == "__main__":
+    print("Pharma AI backend running on port 5001")
+    app.run(host="0.0.0.0", port=5001)
