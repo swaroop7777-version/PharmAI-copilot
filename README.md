@@ -1,4 +1,4 @@
-click this repo for  full pharAI CODE AND TO USE OUR AI: https://github.com/keilahchemu7/pharmaaiaccelerator
+click this repo for  full pharmaAI CODE AND TO USE OUR AI: https://github.com/keilahchemu7/pharmaaiaccelerator
 
 live AI Application: https://pharmaaiaccelerator.lovable.app
 
