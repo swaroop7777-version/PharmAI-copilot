@@ -1,5 +1,7 @@
 click this repo for  full pharAI CODE AND TO USE OUR AI: https://github.com/keilahchemu7/pharmaaiaccelerator
 
+live AI Application: https://pharmaaiaccelerator.lovable.app
+
 Pharma AI – AI-Powered Regulatory Compliance Assistant
 
 Pharma AI is an AI-powered Medical-Legal-Regulatory (MLR) assistant designed to help pharmaceutical teams generate and audit marketing content while ensuring compliance with regulatory standards.
