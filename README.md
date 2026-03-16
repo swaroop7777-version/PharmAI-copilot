@@ -1,6 +1,6 @@
 click this repo for  full pharmaAI CODE AND TO USE OUR AI: https://github.com/keilahchemu7/pharmaaiaccelerator
 
-live AI Application: https://pharmaaiaccelerator.lovable.app
+click here for using live AI Application: https://pharmaaiaccelerator.lovable.app
 
 Pharma AI – AI-Powered Regulatory Compliance Assistant
 
